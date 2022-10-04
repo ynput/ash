@@ -1,0 +1,21 @@
+[tool.poetry]
+name = "ash"
+version = "0.1.0"
+description = ""
+authors = ["Martastain <martas@imm.cz>"]
+
+[tool.poetry.dependencies]
+python = "^3.10"
+requests = "^2.28.1"
+nxtools = "^1.6"
+pydantic = "^1.10.2"
+psutil = "^5.9.2"
+python-dotenv = "^0.21.0"
+docker = "^6.0.0"
+
+[tool.poetry.dev-dependencies]
+pytest = "^5.2"
+
+[build-system]
+requires = ["poetry-core>=1.0.0"]
+build-backend = "poetry.core.masonry.api"
