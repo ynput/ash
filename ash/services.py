@@ -60,6 +60,7 @@ class Services:
                 "ay_addon_name": addon_name,
                 "ay_addon_version": addon_version,
                 "ay_server_url": config.server_url,
+                "ay_service_name": service_name,
             }
         )
 
