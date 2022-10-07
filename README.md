@@ -12,12 +12,14 @@ Use `poetry run -m ash` (Python 3.10 is required) or the included Dockerfile to 
 Run `docker build -t openpype/ash:latest .` to build the image.
 
 When running, don't forget to mount `/var/run/docker.sock` into the container.
+You should also force a container hostname to avoid unpredictable Docker hashes.
 
 For example:
 
 ```
 docker run --rm -ti \
   -v /var/run/docker.sock:/var/run/docker.sock \
+  --hostname worker01 \
   --env AY_API_KEY=verysecureapikey \
   --env AY_SERVER_URL="http://172.18.0.1:5000" \
   openpype/ash

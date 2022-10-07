@@ -14,35 +14,35 @@ class Services:
         cls.client = docker.DockerClient(base_url="unix://var/run/docker.sock")
 
     @classmethod
-    def get_running_ids(cls):
-        result: list[int] = []
+    def get_running_services(cls) -> list[str]:
+        result: list[str] = []
         if cls.client is None:
             cls.connect()
         for container in cls.client.containers.list():
             labels = container.labels
-            if service_id := labels.get(f"{cls.prefix}.service_id"):
-                result.append(int(service_id))
+            if service_name := labels.get(f"{cls.prefix}.service_name"):
+                result.append(service_name)
         return result
 
     @classmethod
-    def stop_orphans(cls, should_run: list[int]):
+    def stop_orphans(cls, should_run: list[str]):
         if cls.client is None:
             cls.connect()
         for container in cls.client.containers.list():
             labels = container.labels
-            if service_id := labels.get(f"{cls.prefix}.service_id"):
-                if int(service_id) in should_run:
+            if service_name := labels.get(f"{cls.prefix}.service_name"):
+                if service_name in should_run:
                     continue
-                logging.warning(f"Stopping service {service_id}")
+                logging.warning(f"Stopping service {service_name}")
                 container.stop()
 
     @classmethod
     def ensure_running(
         cls,
-        service_id: int,
+        service_name: str,
         addon_name: str,
         addon_version: str,
-        service_name: str,
+        service: str,
         image: str,
         environment: dict[str, Any] | None = None,
     ):
@@ -64,7 +64,8 @@ class Services:
         )
 
         hostname = slugify(
-            f"aysvc_{addon_name}_{addon_version}_{service_name}", separator="_"
+            f"aysvc_{service_name}",
+            separator="_",
         )
 
         #
@@ -76,17 +77,21 @@ class Services:
 
             if labels.get(f"{cls.prefix}.service_name") != service_name:
                 continue
-            if labels.get(f"{cls.prefix}.addon_name") != addon_name:
-                continue
-            if labels.get(f"{cls.prefix}.addon_version") != addon_version:
-                continue
+
+            if (
+                labels.get(f"{cls.prefix}.service") != service
+                or labels.get(f"{cls.prefix}.addon_name") != addon_name
+                or labels.get(f"{cls.prefix}.addon_version") != addon_version
+            ):
+                logging.error("SERVICE MISMATCH. This shouldn't happen. Stopping.")
+                container.stop()
 
             break
         else:
 
             # And start it, if not
             logging.info(
-                f"Starting {addon_name}:{addon_version}/{service_name} (image: {image})"
+                f"Starting {service_name} {addon_name}:{addon_version}/{service} (image: {image})"
             )
 
             cls.client.containers.run(
@@ -97,8 +102,8 @@ class Services:
                 hostname=hostname,
                 name=hostname,
                 labels={
-                    f"{cls.prefix}.service_id": str(service_id),
                     f"{cls.prefix}.service_name": service_name,
+                    f"{cls.prefix}.service": service,
                     f"{cls.prefix}.addon_name": addon_name,
                     f"{cls.prefix}.addon_version": addon_version,
                 },
