@@ -2,12 +2,13 @@ import time
 
 from typing import Any
 from nxtools import logging
+from pydantic import Field
 
 from .api import api
 from .config import config
 from .health import get_health
 from .services import Services
-from .common import OPModel, Field
+from .common import OPModel
 
 
 class ServiceDataModel(OPModel):

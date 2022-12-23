@@ -90,16 +90,15 @@ class Services:
             break
         else:
 
-            # And start it, if not
-            logging.info(
-                f"Starting {service_name} {addon_name}:{addon_version}/{service} (image: {image})"
-            )
+            # And start it
+            addon_string = f"{addon_name}:{addon_version}/{service}"
+            logging.info( f"Starting {service_name} {addon_string} (image: {image})")
 
             cls.client.containers.run(
                 image,
                 detach=True,
                 auto_remove=True,
-                environment=environment,
+                environment={k.upper(): v for k, v in environment.items()},
                 hostname=hostname,
                 name=hostname,
                 labels={
