@@ -2,13 +2,13 @@ import time
 
 from typing import Any
 from nxtools import logging
-from pydantic import Field
+from datetime import datetime
 
 from .api import api
 from .config import config
 from .health import get_health
 from .services import Services
-from .common import OPModel
+from .common import OPModel, Field
 
 
 class ServiceDataModel(OPModel):
@@ -24,7 +24,7 @@ class ServiceModel(OPModel):
     service: str = Field(..., example="leecher")
     should_run: bool = Field(...)
     is_running: bool = Field(...)
-    last_seen: int | None = Field(None)
+    last_seen: datetime | None = Field(None)
     data: ServiceDataModel = Field(default_factory=ServiceDataModel)
 
 
@@ -37,12 +37,15 @@ def main():
         "services": Services.get_running_services(),
     }
 
-    response = api.post("hosts/heartbeat", json=payload)
-    if not response:
-        logging.error("no response")
-        return
+    try:
+        response = api.post("hosts/heartbeat", json=payload)
+        if not response:
+            logging.error("no response")
+            return
+            services = response.json()["services"]
+    except Exception as e:
+        logging.error("error: %s", e)
 
-    services = response.json()["services"]
     should_run: list[str] = []
     for service_data in services:
         service = ServiceModel(**service_data)

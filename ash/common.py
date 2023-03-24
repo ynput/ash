@@ -1,8 +1,8 @@
-__all__ = ["OPModel"]
+__all__ = ["OPModel", "Field"]
 
 import json
 
-from pydantic import BaseModel
+from pydantic import BaseModel, Field
 
 
 def camelize(src: str) -> str:

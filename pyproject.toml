@@ -1,7 +1,7 @@
 [tool.poetry]
-name = "ash"
+name = "ayon-ash"
 version = "0.1.0"
-description = ""
+description = "Ayon service host"
 authors = ["Martastain <martas@imm.cz>"]
 
 [tool.poetry.dependencies]
