@@ -33,7 +33,7 @@ Use the following environment variables to configure ash (`.env` file is support
 
 ### AY_SERVER_URL
 
-Path to the API server including the schema (for example `https://openpype.cloud`).
+Path to the API server including the schema (for example `https://ayon.cloud`).
 
 ### AY_API_KEY
 
