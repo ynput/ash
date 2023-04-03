@@ -7,7 +7,7 @@ from .config import config
 
 class Services:
     client: docker.DockerClient | None = None
-    prefix: str = "io.openpype.service"
+    prefix: str = "io.ayon.service"
 
     @classmethod
     def connect(cls):
@@ -52,15 +52,15 @@ class Services:
         if environment is None:
             environment = {}
 
-        if "ay_api_key" not in environment:
-            environment["ay_api_key"] = config.api_key
+        if "ayon_api_key" not in environment:
+            environment["ayon_api_key"] = config.api_key
 
         environment.update(
             {
-                "ay_addon_name": addon_name,
-                "ay_addon_version": addon_version,
-                "ay_server_url": config.server_url,
-                "ay_service_name": service_name,
+                "ayon_addon_name": addon_name,
+                "ayon_addon_version": addon_version,
+                "ayon_server_url": config.server_url,
+                "ayon_service_name": service_name,
             }
         )
 
@@ -92,7 +92,7 @@ class Services:
 
             # And start it
             addon_string = f"{addon_name}:{addon_version}/{service}"
-            logging.info( f"Starting {service_name} {addon_string} (image: {image})")
+            logging.info(f"Starting {service_name} {addon_string} (image: {image})")
 
             cls.client.containers.run(
                 image,

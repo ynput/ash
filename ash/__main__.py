@@ -12,7 +12,7 @@ from .common import OPModel, Field
 
 
 class ServiceDataModel(OPModel):
-    image: str | None = Field(None, example="openpype/ftrack-addon-leecher:2.0.0")
+    image: str | None = Field(None, example="ynput/ayon-ftrack-leecher:2.0.0")
     env: dict[str, Any] = Field(default_factory=dict)
 
 

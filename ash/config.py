@@ -18,9 +18,9 @@ def get_config():
     data = {}
     for key, val in os.environ.items():
         key = key.lower()
-        if not key.startswith("ay_"):
+        if not key.startswith("ayon_"):
             continue
-        data[key.replace("ay_", "", 1)] = val
+        data[key.replace("ayon_", "", 1)] = val
     try:
         config = Config(**data)
     except ValidationError as e:
