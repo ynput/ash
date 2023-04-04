@@ -1,7 +1,7 @@
 import time
 
 from typing import Any
-from nxtools import logging
+from nxtools import logging, log_traceback
 from datetime import datetime
 
 from .api import api
@@ -42,9 +42,11 @@ def main():
         if not response:
             logging.error("no response")
             return
-            services = response.json()["services"]
-    except Exception as e:
-        logging.error("error: %s", e)
+    except Exception:
+        log_traceback("Unable to send heartbeat")
+        return
+    else:
+        services = response.json()["services"]
 
     should_run: list[str] = []
     for service_data in services:
