@@ -100,6 +100,7 @@ class Services:
                 auto_remove=True,
                 environment={k.upper(): v for k, v in environment.items()},
                 hostname=hostname,
+                network_mode=config.network_mode,
                 name=hostname,
                 labels={
                     f"{cls.prefix}.service_name": service_name,

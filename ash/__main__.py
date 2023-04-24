@@ -42,11 +42,10 @@ def main():
         if not response:
             logging.error("no response")
             return
+        services = response.json()["services"]
     except Exception:
         log_traceback("Unable to send heartbeat")
         return
-    else:
-        services = response.json()["services"]
 
     should_run: list[str] = []
     for service_data in services:

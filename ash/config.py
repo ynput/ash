@@ -12,6 +12,7 @@ class Config(BaseModel):
     api_key: str = Field(...)
     server_url: str = Field(...)
     hostname: str = Field(default_factory=socket.gethostname)
+    network_mode: str = Field(default="bridge")
 
 
 def get_config():

@@ -25,7 +25,10 @@ class API:
         if not response:
             print(response.text)
             critical_error("Unable to login")
-        self.user = User(**response.json())
+        try:
+            self.user = User(**response.json())
+        except Exception:
+            critical_error("Unable to login")
         logging.info(f"Logged in as {self.user.name}")
 
     def url_for(self, endpoint: str) -> str:
