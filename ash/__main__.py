@@ -44,7 +44,7 @@ def main():
             return
         services = response.json()["services"]
     except Exception:
-        log_traceback("Unable to send heartbeat")
+        logging.error("Unable to connect Ayon server")
         return
 
     should_run: list[str] = []

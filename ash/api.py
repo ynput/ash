@@ -1,4 +1,5 @@
 import requests
+import time
 
 from nxtools import logging, critical_error
 from pydantic import BaseModel
@@ -21,7 +22,15 @@ class API:
             }
         )
 
-        response = self.get("users/me")
+        while True:
+            try:
+                response = self.get("users/me")
+            except Exception:
+                logging.warning("Unable to connect to the server... Retrying")
+                time.sleep(5)
+                continue
+            break
+
         if not response:
             print(response.text)
             critical_error("Unable to login")

@@ -5,6 +5,7 @@ import dotenv
 from pydantic import BaseModel, Field, ValidationError
 from nxtools import logging, critical_error
 
+logging.user = "ash"
 dotenv.load_dotenv()
 
 
