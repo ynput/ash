@@ -1,7 +1,7 @@
 import time
 
 from typing import Any
-from nxtools import logging, log_traceback
+from nxtools import logging
 from datetime import datetime
 
 from .api import api
@@ -11,9 +11,16 @@ from .services import Services
 from .common import OPModel, Field
 
 
-class ServiceDataModel(OPModel):
-    image: str | None = Field(None, example="ynput/ayon-ftrack-leecher:2.0.0")
+class ServiceConfigModel(OPModel):
+    volumes: list[str] | None = Field(None, title="Volumes", example=["/tmp:/tmp"])
+    ports: list[str] | None = Field(None, title="Ports", example=["8080:8080"])
+    mem_limit: str | None = Field(None, title="Memory Limit", example="1g")
+    user: str | None = Field(None, title="User", example="1000")
     env: dict[str, Any] = Field(default_factory=dict)
+
+
+class ServiceDataModel(ServiceConfigModel):
+    image: str | None = Field(None, example="ayon/ftrack-addon-leecher:2.0.0")
 
 
 class ServiceModel(OPModel):
@@ -55,12 +62,15 @@ def main():
         if not service.data.image:
             continue
 
+        service_config = ServiceConfigModel(**service.data.dict())
+
         Services.ensure_running(
             service_name=service.name,
             addon_name=service.addon_name,
             addon_version=service.addon_version,
             service=service.service,
             image=service.data.image,
+            **service_config,
         )
 
     Services.stop_orphans(should_run=should_run)

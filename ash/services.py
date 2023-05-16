@@ -45,6 +45,7 @@ class Services:
         service: str,
         image: str,
         environment: dict[str, Any] | None = None,
+        **kwargs,
     ):
         if cls.client is None:
             cls.connect()
@@ -108,4 +109,5 @@ class Services:
                     f"{cls.prefix}.addon_name": addon_name,
                     f"{cls.prefix}.addon_version": addon_version,
                 },
+                **kwargs,
             )
