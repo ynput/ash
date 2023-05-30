@@ -1,18 +1,23 @@
-import docker
+import os
+import socket
+
+
 from nxtools import logging, slugify
 
 from .config import config
+from .containers import PODMAN, get_container_client
 from .models import ServiceConfigModel
 from .service_logging import ServiceLogger
 
 
 class Services:
-    client: docker.DockerClient | None = None
+    client = None
     prefix: str = "io.ayon.service"
 
     @classmethod
     def connect(cls):
-        cls.client = docker.DockerClient(base_url="unix://var/run/docker.sock")
+        client, _ = get_container_client()
+        cls.client = client
 
     @classmethod
     def get_running_services(cls) -> list[str]:
@@ -22,10 +27,13 @@ class Services:
         if cls.client is None:
             return result
 
+        logging.debug("Checking for Running services.")
+
         for container in cls.client.containers.list():
             labels = container.labels
             if service_name := labels.get(f"{cls.prefix}.service_name"):
                 result.append(service_name)
+        logging.debug("Found {0} running services: {1}".format(len(result), result))
         return result
 
     @classmethod
@@ -88,7 +96,7 @@ class Services:
         #
         # Check whether it is running already
         #
-
+        logging.info("Checking if Service is already running.")
         container = None
 
         for container in cls.client.containers.list():
@@ -104,7 +112,8 @@ class Services:
             except AssertionError:
                 logging.error("SERVICE MISMATCH. This shouldn't happen. Stopping.")
                 container.stop()
-
+            else:
+                logging.debug(f"Service {service_name} already running at {container.id}")
             break
         else:
             # And start it
@@ -132,5 +141,4 @@ class Services:
 
             container = cls.spawn(image, hostname, environment, labels)
 
-        # Ensure container logger is running
         ServiceLogger.add(service_name, container)

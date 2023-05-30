@@ -26,8 +26,9 @@ class API:
         while True:
             try:
                 response = self.get("users/me")
-            except Exception:
-                logging.warning("Unable to connect to the server... Retrying")
+            except Exception as e:
+                logging.warning(f"Unable to connect to the server: {e}\nRetrying...")
+
                 time.sleep(5)
                 continue
             break
