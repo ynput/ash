@@ -3,12 +3,12 @@ ENV PYTHONUNBUFFERED=1
 
 RUN pip3 install virtualenv poetry
 
-RUN mkdir /ash
-COPY . /ash/
 WORKDIR /ash
+COPY ./pyproject.toml /ash/pyproject.toml
 
 RUN poetry config virtualenvs.create false \
  && poetry install --no-interaction --no-ansi
 
-CMD ["poetry", "run", "python", "-m", "ash"]
+COPY . /ash/
+CMD ["python", "-m", "ash"]
 
