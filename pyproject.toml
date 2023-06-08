@@ -1,8 +1,8 @@
 [tool.poetry]
 name = "ayon-ash"
-version = "0.1.0"
+version = "0.1.1"
 description = "Ayon service host"
-authors = ["Martastain <martas@imm.cz>"]
+authors = ["Ynput <info@ynput.io>", "Martin Wacker <martin@ynput.io"]
 
 [tool.poetry.dependencies]
 python = "^3.10"
