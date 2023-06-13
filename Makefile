@@ -1,18 +1,27 @@
-default:
-	@echo "Use make buid / make run"
+IMAGE_NAME=ynput/ayon-ash
+VERSION=$(shell python -c "import ash; print(ash.__version__, end='')")
 
-run:
+run: build
 	docker run \
 		-it --rm \
 		--hostname worker \
 		-v $(shell pwd)/ash:/ash/ash \
 		-v /var/run/docker.sock:/var/run/docker.sock \
-		-e AYON_API_KEY=b00b567890123456789012345678iee5 \
+		-e AYON_API_KEY=veryinsecurapikey \
 		-e AYON_SERVER_URL=http://localhost:5000 \
-		ynput/ayon-ash:latest
+		--log-driver=syslog \
+		--log-opt syslog-address=udp://localhost:514 \
+		$(IMAGE_NAME):latest
 
-build:
-	docker build -t ynput/ayon-ash:latest .
+check:
+	sed -i "s/^version = \".*\"/version = \"$(VERSION)\"/" pyproject.toml
+	poetry run black .
+	poetry run ruff --fix .
+	poetry run mypy .
+
+build: check
+	docker build -t $(IMAGE_NAME):latest -t $(IMAGE_NAME):$(VERSION) .
 
 dist: build
+	docker push ynput/ayon-ash:$(VERSION)
 	docker push ynput/ayon-ash:latest

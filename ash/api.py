@@ -1,19 +1,20 @@
-import requests
 import time
 
-from nxtools import logging, critical_error
+import requests
+from nxtools import critical_error, logging
 from pydantic import BaseModel
 
 from .config import config
 
 
 class User(BaseModel):
-    name: str
+    name: str = "anonymous"
 
 
 class API:
+    user: User
+
     def __init__(self):
-        self.user = {}
         self.session = requests.Session()
         self.session.headers.update(
             {
