@@ -1,15 +1,12 @@
 import os
-import json
 import socket
 import sys
+from typing import Literal
 
 import docker
 import dotenv
-
-from typing import Literal
-
+from nxtools import critical_error, logging
 from pydantic import BaseModel, Field, ValidationError
-from nxtools import logging, critical_error
 
 logging.user = "ash"
 dotenv.load_dotenv()
@@ -17,11 +14,30 @@ dotenv.load_dotenv()
 
 class Config(BaseModel):
     api_key: str = Field(...)
-    server_url: str = Field(...)
+    server_url: str = Field("http://ayon:5000")
     hostname: str = Field(default_factory=socket.gethostname)
-    network_mode: str = Field(default="bridge")
+    network: str | None = Field(default=None)
+    network_mode: str | None = Field(default=None)
     log_driver: Literal["loki"] | None = Field(default=None)
     loki_url: str | None = Field(default=None)
+
+
+def get_local_info():
+    client = docker.DockerClient(base_url="unix://var/run/docker.sock")
+    api = docker.APIClient(base_url="unix://var/run/docker.sock")
+    for container in client.containers.list():
+        insp = api.inspect_container(container.id)
+        if insp["Config"]["Hostname"] != socket.gethostname():
+            continue
+        # print(json.dumps(insp, indent=4))
+        break
+    else:
+        logging.error("Weird, no container found for this host")
+        sys.exit(1)
+
+    networks = insp["NetworkSettings"]["Networks"]
+
+    return {"networks": list(networks.keys())}
 
 
 def get_config() -> Config:
@@ -35,27 +51,18 @@ def get_config() -> Config:
         config = Config(**data)
     except ValidationError as e:
         for error in e.errors():
-            logging.error(f"{' '.join(error['loc'])} : {error['msg']} ")
+            error_desc = error["msg"]
+            error_loc = ".".join(str(loc) for loc in error["loc"])
+            logging.error(f"Invalid configuration at {error_loc}: {error_desc}")
+
         critical_error("Unable to configure API")
+
+    local_info = get_local_info()
+
+    if config.network is None and config.network_mode is None:
+        config.network = local_info["networks"][0]
+
     return config
 
-
-def get_local_info():
-    client = docker.DockerClient(base_url="unix://var/run/docker.sock")
-    api = docker.APIClient(base_url="unix://var/run/docker.sock")
-    for container in client.containers.list():
-        insp = api.inspect_container(container.id)
-        if insp["Config"]["Hostname"] != socket.gethostname():
-            continue
-
-        print(json.dumps(insp, indent=4))
-        break
-    else:
-        logging.error("Weird, no container found for this host")
-        sys.exit(1)
-
-
-get_local_info()
-sys.exit(0)
 
 config = get_config()

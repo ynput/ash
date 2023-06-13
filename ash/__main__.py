@@ -1,38 +1,12 @@
 import time
 
-from typing import Any
 from nxtools import logging
-from datetime import datetime
 
 from .api import api
 from .config import config
 from .health import get_health
+from .models import ServiceConfigModel, ServiceModel
 from .services import Services
-from .common import OPModel, Field
-
-
-class ServiceConfigModel(OPModel):
-    volumes: list[str] | None = Field(None, title="Volumes", example=["/tmp:/tmp"])
-    ports: list[str] | None = Field(None, title="Ports", example=["8080:8080"])
-    mem_limit: str | None = Field(None, title="Memory Limit", example="1g")
-    user: str | None = Field(None, title="User", example="1000")
-    env: dict[str, Any] = Field(default_factory=dict)
-
-
-class ServiceDataModel(ServiceConfigModel):
-    image: str | None = Field(None, example="ayon/ftrack-addon-leecher:2.0.0")
-
-
-class ServiceModel(OPModel):
-    name: str = Field(...)
-    hostname: str = Field(..., example="worker03")
-    addon_name: str = Field(..., example="ftrack")
-    addon_version: str = Field(..., example="2.0.0")
-    service: str = Field(..., example="leecher")
-    should_run: bool = Field(...)
-    is_running: bool = Field(...)
-    last_seen: datetime | None = Field(None)
-    data: ServiceDataModel = Field(default_factory=ServiceDataModel)
 
 
 def main():
@@ -70,7 +44,7 @@ def main():
             addon_version=service.addon_version,
             service=service.service,
             image=service.data.image,
-            **service_config,
+            service_config=service_config,
         )
 
     Services.stop_orphans(should_run=should_run)

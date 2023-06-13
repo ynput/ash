@@ -1,10 +1,7 @@
 IMAGE_NAME=ynput/ayon-ash
-VERSION=$(shell python -c 'import ash; print(ash.__version__)')
+VERSION=$(shell python -c "import ash; print(ash.__version__, end='')")
 
-default:
-	@echo "Use make build to build $(IMAGE_NAME):$(VERSION)"
-
-run:
+run: build
 	docker run \
 		-it --rm \
 		--hostname worker \
@@ -16,7 +13,13 @@ run:
 		--log-opt syslog-address=udp://localhost:514 \
 		$(IMAGE_NAME):latest
 
-build:
+check:
+	sed -i "s/^version = \".*\"/version = \"$(VERSION)\"/" pyproject.toml
+	poetry run black .
+	poetry run ruff --fix .
+	poetry run mypy .
+
+build: check
 	docker build -t $(IMAGE_NAME):latest -t $(IMAGE_NAME):$(VERSION) .
 
 dist: build

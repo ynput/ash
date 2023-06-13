@@ -1,8 +1,10 @@
-import docker
-
-from nxtools import logging, slugify
 from typing import Any
+
+import docker
+from nxtools import logging, slugify
+
 from .config import config
+from .models import ServiceConfigModel
 
 
 class Services:
@@ -18,6 +20,10 @@ class Services:
         result: list[str] = []
         if cls.client is None:
             cls.connect()
+
+        if cls.client is None:
+            return result
+
         for container in cls.client.containers.list():
             labels = container.labels
             if service_name := labels.get(f"{cls.prefix}.service_name"):
@@ -28,6 +34,8 @@ class Services:
     def stop_orphans(cls, should_run: list[str]):
         if cls.client is None:
             cls.connect()
+        if cls.client is None:
+            return
         for container in cls.client.containers.list():
             labels = container.labels
             if service_name := labels.get(f"{cls.prefix}.service_name"):
@@ -44,8 +52,8 @@ class Services:
         addon_version: str,
         service: str,
         image: str,
+        service_config: ServiceConfigModel,
         environment: dict[str, Any] | None = None,
-        **kwargs,
     ):
         if cls.client is None:
             cls.connect()
@@ -74,6 +82,9 @@ class Services:
         # Check whether it is running already
         #
 
+        if cls.client is None:
+            return
+
         for container in cls.client.containers.list():
             labels = container.labels
 
@@ -90,18 +101,24 @@ class Services:
 
             break
         else:
-
             # And start it
             addon_string = f"{addon_name}:{addon_version}/{service}"
             logging.info(f"Starting {service_name} {addon_string} (image: {image})")
+
+            env = {k.upper(): v for k, v in environment.items()}
+            env.update(service_config.env)
+
+            kwargs = service_config.dict()
+            kwargs.pop("env", None)
 
             cls.client.containers.run(
                 image,
                 detach=True,
                 auto_remove=True,
-                environment={k.upper(): v for k, v in environment.items()},
+                environment=env,
                 hostname=hostname,
                 network_mode=config.network_mode,
+                network=config.network,
                 name=hostname,
                 labels={
                     f"{cls.prefix}.service_name": service_name,
