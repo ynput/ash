@@ -1,6 +1,8 @@
 AYON service host a.k.a. ASH
 ===
 
+ASH is a small process that handles spawning services as specified by the administrator in the services page. It periodically checks the services declared in the Ayon server database and starts them if they are not running. It also provides a simple API for services to report their status and to receive configuration.
+
 Running
 -------
 
