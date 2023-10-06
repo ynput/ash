@@ -1,6 +1,6 @@
 [tool.poetry]
 name = "ayon-ash"
-version = "0.2.0"
+version = "0.3.0"
 description = "Ayon service host"
 authors = ["Ynput <info@ynput.io>", "Martin Wacker <martin@ynput.io"]
 
