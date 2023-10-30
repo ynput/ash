@@ -1,6 +1,6 @@
 import threading
 
-from nxtools import logging
+from nxtools import logging, log_traceback
 
 
 class ServiceLog:
@@ -10,16 +10,28 @@ class ServiceLog:
         threading.Thread(target=self._run, daemon=True).start()
 
     def _run(self):
-        logging.info(f"Starting log stream for {self.service_name}")
-        for line in self.container.logs(stream=True, tail=1, follow=True):
-            print(f"{line.decode().strip()}")
+        logging.info(f"Starting log stream for {self.service_name}, last 10 lines were...")
+        for line in self.container.logs(stream=True, tail=10, stderr=True):
+            log_string = line.decode().strip()
+            log_elements = log_string.split(" ")
+
+            log_date = log_elements[0]
+            log_time = log_elements[1]
+            log_severity = log_elements[2]
+
+            log_message = log_string.split(log_severity)[-1]
+            print(f"{log_date} {log_time} {log_severity} {self.service_name} {log_message}")
 
         # service exited
         # print the status code and free the container
 
-        status_code = self.container.wait()["StatusCode"]
-        logging.warning(f"{self.service_name} exited with code {status_code}")
-        self.container = None
+        try:
+            status_code = self.container.wait()["StatusCode"]
+            logging.warning(f"{self.service_name} exited with code {status_code}")
+        except Exception as e:
+            logging.warning(f"Lost connection to the container:")
+            log_traceback(e)
+            self.container = None
 
 
 class ServiceLogger:
