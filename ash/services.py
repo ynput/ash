@@ -23,13 +23,10 @@ class Services:
         if cls.client is None:
             return result
 
-        logging.debug("Checking for Running services.")
-
         for container in cls.client.containers.list():
             labels = container.labels
             if service_name := labels.get(f"{cls.prefix}.service_name"):
                 result.append(service_name)
-        logging.debug("Found {0} running services: {1}".format(len(result), result))
         return result
 
     @classmethod
@@ -92,7 +89,6 @@ class Services:
         #
         # Check whether it is running already
         #
-        logging.info("Checking if Service is already running.")
         container = None
 
         for container in cls.client.containers.list():
@@ -108,10 +104,6 @@ class Services:
             except AssertionError:
                 logging.error("SERVICE MISMATCH. This shouldn't happen. Stopping.")
                 container.stop()
-            else:
-                logging.debug(
-                    f"Service {service_name} already running at {container.id}"
-                )
             break
         else:
             # And start it
