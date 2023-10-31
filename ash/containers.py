@@ -17,7 +17,7 @@ if not DOCKER_HOST:
 
 
 def get_container_client():
-    """Creates a Client connection to the Socket 
+    """Creates a Client connection to the Socket
 
     Depending on teh container runtime we use, it will import and
     create the class acordingly.
@@ -32,10 +32,12 @@ def get_container_client():
 
     if PODMAN:
         from podman import PodmanClient
+
         client = PodmanClient(base_url=DOCKER_HOST)
         logging.info("Using container client: Podman")
     else:
         from docker import APIClient, DockerClient
+
         client = DockerClient(base_url=DOCKER_HOST)
         api = APIClient(base_url=DOCKER_HOST)
         logging.info("Using container client: Docker")

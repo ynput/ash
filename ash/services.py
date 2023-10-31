@@ -1,11 +1,7 @@
-import os
-import socket
-
-
 from nxtools import logging, slugify
 
 from .config import config
-from .containers import PODMAN, get_container_client
+from .containers import get_container_client
 from .models import ServiceConfigModel
 from .service_logging import ServiceLogger
 
@@ -113,7 +109,9 @@ class Services:
                 logging.error("SERVICE MISMATCH. This shouldn't happen. Stopping.")
                 container.stop()
             else:
-                logging.debug(f"Service {service_name} already running at {container.id}")
+                logging.debug(
+                    f"Service {service_name} already running at {container.id}"
+                )
             break
         else:
             # And start it

@@ -4,11 +4,11 @@ import sys
 from typing import Literal
 from urllib.parse import urlparse
 
-from .containers import PODMAN, get_container_client
-
 import dotenv
-from nxtools import critical_error, logging, log_traceback
+from nxtools import critical_error, log_traceback, logging
 from pydantic import BaseModel, Field, ValidationError
+
+from .containers import PODMAN, get_container_client
 
 logging.user = "ash"
 dotenv.load_dotenv()
@@ -53,10 +53,11 @@ def get_local_info():
     try:
         network = next(iter(insp["NetworkSettings"]["Networks"].keys()), None)
         network_mode = insp["HostConfig"]["NetworkMode"]
-    except Exceptions as e:
+    except Exception as e:
         logging.error(
             "ASH is not running in a defined network... make sure it's in"
-            "the same network as ayon-docker containers.")
+            "the same network as ayon-docker containers."
+        )
         log_traceback(e)
 
     return {"network": network, "network_mode": network_mode}
@@ -74,14 +75,11 @@ def get_config() -> Config:
             # So here we try to resolve it to an actual IP. If we fail, means
             # we can't reach the backend at all.
             try:
-                original_value = val
                 server_hostname = urlparse(val).hostname
                 server_ip = socket.gethostbyname(server_hostname)
                 val = val.replace(server_hostname, server_ip)
-            except Exception as e:
-                critical_error(
-                    "Unable to resolve `AYON_SERVER_URL` {original_value}"
-                )
+            except Exception:
+                critical_error("Unable to resolve `AYON_SERVER_URL` {original_value}")
 
         data[key.replace("ayon_", "", 1)] = val
     try:
