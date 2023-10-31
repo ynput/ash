@@ -14,17 +14,7 @@ class ServiceLog:
             f"Starting log stream for {self.service_name}, last 10 lines were..."
         )
         for line in self.container.logs(stream=True, tail=10, stderr=True):
-            log_string = line.decode().strip()
-            log_elements = log_string.split(" ")
-
-            log_date = log_elements[0]
-            log_time = log_elements[1]
-            log_severity = log_elements[2]
-
-            log_message = log_string.split(log_severity)[-1]
-            print(
-                f"{log_date} {log_time} {log_severity} {self.service_name} {log_message}"
-            )
+            print(line.decode().strip())
 
         # service exited
         # print the status code and free the container
