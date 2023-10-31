@@ -76,6 +76,7 @@ def get_config() -> Config:
             # we can't reach the backend at all.
             try:
                 server_hostname = urlparse(val).hostname
+                assert server_hostname is not None, "Invalid URL"
                 server_ip = socket.gethostbyname(server_hostname)
                 val = val.replace(server_hostname, server_ip)
             except Exception:
