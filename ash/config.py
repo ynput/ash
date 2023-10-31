@@ -80,7 +80,7 @@ def get_config() -> Config:
                 server_ip = socket.gethostbyname(server_hostname)
                 val = val.replace(server_hostname, server_ip)
             except Exception:
-                critical_error("Unable to resolve `AYON_SERVER_URL` {original_value}")
+                critical_error(f"Unable to resolve `AYON_SERVER_URL` {val}")
 
         data[key.replace("ayon_", "", 1)] = val
     try:
