@@ -2,11 +2,13 @@ import os
 import socket
 import sys
 from typing import Literal
+from urllib.parse import urlparse
 
-import docker
 import dotenv
-from nxtools import critical_error, logging
+from nxtools import critical_error, log_traceback, logging
 from pydantic import BaseModel, Field, ValidationError
+
+from .containers import PODMAN, get_container_client
 
 logging.user = "ash"
 dotenv.load_dotenv()
@@ -23,21 +25,42 @@ class Config(BaseModel):
 
 
 def get_local_info():
-    client = docker.DockerClient(base_url="unix://var/run/docker.sock")
-    api = docker.APIClient(base_url="unix://var/run/docker.sock")
+    """Infer info from ASH's container.
+
+    We get the "network" and "network_mode" from the current running
+    ASH (what runs this code) container.
+
+    These two can be provided via `AYON_NETWORK` and `AYON_NETWORK_MODE`.
+    """
+    client, api = get_container_client()
+
+    logging.info("Querying existing containers...")
     for container in client.containers.list():
-        insp = api.inspect_container(container.id)
+        if PODMAN:
+            insp = container.inspect()
+        else:
+            insp = api.inspect_container(container.id)
         if insp["Config"]["Hostname"] != socket.gethostname():
+            logging.debug(
+                f"Hostname for container {insp['Name']} doesn't match ash's, ignoring."
+            )
             continue
-        # print(json.dumps(insp, indent=4))
         break
     else:
         logging.error("Weird, no container found for this host")
         sys.exit(1)
 
-    networks = insp["NetworkSettings"]["Networks"]
+    try:
+        network = next(iter(insp["NetworkSettings"]["Networks"].keys()), None)
+        network_mode = insp["HostConfig"]["NetworkMode"]
+    except Exception as e:
+        logging.error(
+            "ASH is not running in a defined network... make sure it's in"
+            "the same network as ayon-docker containers."
+        )
+        log_traceback(e)
 
-    return {"networks": list(networks.keys())}
+    return {"network": network, "network_mode": network_mode}
 
 
 def get_config() -> Config:
@@ -46,6 +69,19 @@ def get_config() -> Config:
         key = key.lower()
         if not key.startswith("ayon_"):
             continue
+        if key == "ayon_server_url":
+            # We won't be able to connect if we receive an `AYON_SERVER_URL`
+            # such as `http://localhost:5000` or `http://ayon-docker_server_1`
+            # So here we try to resolve it to an actual IP. If we fail, means
+            # we can't reach the backend at all.
+            try:
+                server_hostname = urlparse(val).hostname
+                assert server_hostname is not None, "Invalid URL"
+                server_ip = socket.gethostbyname(server_hostname)
+                val = val.replace(server_hostname, server_ip)
+            except Exception:
+                critical_error(f"Unable to resolve `AYON_SERVER_URL` {val}")
+
         data[key.replace("ayon_", "", 1)] = val
     try:
         config = Config(**data)
@@ -57,11 +93,12 @@ def get_config() -> Config:
 
         critical_error("Unable to configure API")
 
-    local_info = get_local_info()
-
     if config.network is None and config.network_mode is None:
-        config.network = local_info["networks"][0]
+        local_info = get_local_info()
+        config.network = local_info["network"]
+        config.network_mode = local_info["network_mode"]
 
+    logging.debug(f"ASH Config is: {config}")
     return config
 
 

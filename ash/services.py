@@ -1,18 +1,19 @@
-import docker
 from nxtools import logging, slugify
 
 from .config import config
+from .containers import get_container_client
 from .models import ServiceConfigModel
 from .service_logging import ServiceLogger
 
 
 class Services:
-    client: docker.DockerClient | None = None
+    client = None
     prefix: str = "io.ayon.service"
 
     @classmethod
     def connect(cls):
-        cls.client = docker.DockerClient(base_url="unix://var/run/docker.sock")
+        client, _ = get_container_client()
+        cls.client = client
 
     @classmethod
     def get_running_services(cls) -> list[str]:
@@ -56,13 +57,17 @@ class Services:
         if cls.client is None:
             return
 
+        network_mode = None
+        if config.network_mode and (not config.network):
+            network_mode = config.network_mode
+
         container = cls.client.containers.run(
             image,
             detach=True,
             auto_remove=True,
             environment=environment,
             hostname=hostname,
-            network_mode=config.network_mode,
+            network_mode=network_mode,
             network=config.network,
             name=hostname,
             labels=labels,
@@ -88,7 +93,6 @@ class Services:
         #
         # Check whether it is running already
         #
-
         container = None
 
         for container in cls.client.containers.list():
@@ -104,7 +108,6 @@ class Services:
             except AssertionError:
                 logging.error("SERVICE MISMATCH. This shouldn't happen. Stopping.")
                 container.stop()
-
             break
         else:
             # And start it
@@ -132,5 +135,4 @@ class Services:
 
             container = cls.spawn(image, hostname, environment, labels)
 
-        # Ensure container logger is running
         ServiceLogger.add(service_name, container)
