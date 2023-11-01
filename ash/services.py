@@ -57,13 +57,17 @@ class Services:
         if cls.client is None:
             return
 
+        network_mode = None
+        if config.network_mode and (not config.network):
+            network_mode = config.network_mode
+
         container = cls.client.containers.run(
             image,
             detach=True,
             auto_remove=True,
             environment=environment,
             hostname=hostname,
-            network_mode=config.network_mode,
+            network_mode=network_mode,
             network=config.network,
             name=hostname,
             labels=labels,
