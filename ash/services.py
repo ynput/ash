@@ -49,6 +49,7 @@ class Services:
         hostname: str,
         environment: dict[str, str],
         labels: dict[str, str],
+        volumes: list[str] | None,
         **kwargs,
     ):
         if cls.client is None:
@@ -66,6 +67,7 @@ class Services:
             network=config.network,
             name=hostname,
             labels=labels,
+            volumes=volumes,
             **kwargs,
         )
         return container
@@ -130,7 +132,22 @@ class Services:
                 f"{cls.prefix}.addon_version": addon_version,
             }
 
-            container = cls.spawn(image, hostname, environment, labels)
+            volumes = service_config.volumes or []
+            for bind_mount in config.binds:
+                # add global storage from the ash itself
+                if not isinstance(bind_mount, str):
+                    continue
+                target = bind_mount.split(":")[1]
+                if target.startswith("/storage"):
+                    volumes.append(bind_mount)
+
+            container = cls.spawn(
+                image,
+                hostname,
+                environment,
+                labels,
+                volumes or None,
+            )
 
         # Ensure container logger is running
         ServiceLogger.add(service_name, container)
