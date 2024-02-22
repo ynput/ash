@@ -12,14 +12,22 @@ logging.user = "ash"
 dotenv.load_dotenv()
 
 
-class Config(BaseModel):
+class BaseConfig(BaseModel):
     api_key: str = Field(...)
     server_url: str = Field("http://ayon:5000")
     hostname: str = Field(default_factory=socket.gethostname)
     network: str | None = Field(default=None)
     network_mode: str | None = Field(default=None)
     log_driver: Literal["loki"] | None = Field(default=None)
-    loki_url: str | None = Field(default=None)
+    loki_url: str | None = Field(
+        None,
+        title="Loki URL",
+        description="URL of the Loki server (if log_driver is loki)",
+    )
+
+
+class Config(BaseConfig):
+    binds: list[str] = Field(default_factory=list)
 
 
 def get_local_info():
@@ -37,7 +45,10 @@ def get_local_info():
 
     networks = insp["NetworkSettings"]["Networks"]
 
-    return {"networks": list(networks.keys())}
+    return {
+        "networks": list(networks.keys()),
+        "binds": insp["HostConfig"]["Binds"],
+    }
 
 
 def get_config() -> Config:
@@ -48,7 +59,7 @@ def get_config() -> Config:
             continue
         data[key.replace("ayon_", "", 1)] = val
     try:
-        config = Config(**data)
+        base_config = BaseConfig(**data)
     except ValidationError as e:
         for error in e.errors():
             error_desc = error["msg"]
@@ -58,6 +69,8 @@ def get_config() -> Config:
         critical_error("Unable to configure API")
 
     local_info = get_local_info()
+
+    config = Config(**base_config.dict(), binds=local_info["binds"])
 
     if config.network is None and config.network_mode is None:
         config.network = local_info["networks"][0]
