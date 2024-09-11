@@ -7,6 +7,7 @@ from .config import config
 from .health import get_health
 from .models import ServiceConfigModel, ServiceModel
 from .services import Services
+from .version import __version__
 
 
 def main():
@@ -51,6 +52,7 @@ def main():
 
 
 if __name__ == "__main__":
+    logging.info(f"Starting Ash v{__version__}")
     while "my guitar gently weeps":
         main()
         time.sleep(2)
