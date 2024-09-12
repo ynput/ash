@@ -8,8 +8,12 @@ import dotenv
 from nxtools import critical_error, logging
 from pydantic import BaseModel, Field, ValidationError
 
+from .version import __version__
+
 logging.user = "ash"
 dotenv.load_dotenv()
+
+logging.info(f"Starting Ash v{__version__}")
 
 
 class BaseConfig(BaseModel):
@@ -75,6 +79,9 @@ def get_config() -> Config:
     if config.network is None and config.network_mode is None:
         config.network = local_info["networks"][0]
 
+    logging.debug(
+        f"Configured worker {config.hostname} to connect to {config.server_url}"
+    )
     return config
 
 
