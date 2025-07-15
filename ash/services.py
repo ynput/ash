@@ -54,6 +54,7 @@ class Services:
         environment: dict[str, str],
         labels: dict[str, str],
         volumes: list[str] | None,
+        ports: dict[str, int | None] | None = None,
         **kwargs: Any,
     ) -> Container | None:
         if cls.client is None:
@@ -62,7 +63,7 @@ class Services:
             return None
 
         container: Container = cls.client.containers.run(
-            image,
+            image= image,
             detach=True,
             auto_remove=True,
             environment=environment,
@@ -72,8 +73,8 @@ class Services:
             name=hostname,
             labels=labels,
             volumes=volumes,
-            **kwargs,
-        )
+            ports=ports,
+            **kwargs,)
         return container
 
     @classmethod
@@ -145,12 +146,25 @@ class Services:
                 if target.startswith("/storage"):
                     volumes.append(bind_mount)
 
+            ports: dict[str, int | None] = {}
+            if config.network_mode != "host":
+                for p in service_config.ports or []:
+                    ports_pair = p.split(":")
+                    if len(ports_pair) == 1:
+                        # If only one port is specified, it is the container port
+                        ports[ports_pair[1]] = None
+                    elif len(ports_pair) == 2:
+                        # If two ports are specified, the first is the host port
+                        # and the second is the container port
+                        ports[ports_pair[0]] = int(ports_pair[1])
+
             container = cls.spawn(
                 image,
                 hostname,
                 environment,
                 labels,
                 volumes or None,
+                ports=ports or None,
             )
 
         # Ensure container logger is running
