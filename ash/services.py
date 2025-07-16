@@ -74,7 +74,7 @@ class Services:
             labels=labels,
             volumes=volumes,
             ports=ports,
-            **kwargs,)
+            **kwargs)
         return container
 
     @classmethod
@@ -152,11 +152,11 @@ class Services:
                     ports_pair = p.split(":")
                     if len(ports_pair) == 1:
                         # If only one port is specified, it is the container port
-                        ports[ports_pair[1]] = None
+                        ports[ports_pair[0]] = None
                     elif len(ports_pair) == 2:
                         # If two ports are specified, the first is the host port
                         # and the second is the container port
-                        ports[ports_pair[0]] = int(ports_pair[1])
+                        ports[ports_pair[1]] = int(ports_pair[0])
 
             container = cls.spawn(
                 image,
