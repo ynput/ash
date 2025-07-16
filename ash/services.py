@@ -63,7 +63,7 @@ class Services:
             return None
 
         container: Container = cls.client.containers.run(
-            image= image,
+            image=image,
             detach=True,
             auto_remove=True,
             environment=environment,
@@ -156,7 +156,7 @@ class Services:
                     elif len(ports_pair) == 2:
                         # If two ports are specified, the first is the host port
                         # and the second is the container port
-                        ports[ports_pair[1]] = int(ports_pair[0])
+                        ports[ports_pair[0]] = int(ports_pair[1])
 
             container = cls.spawn(
                 image,
