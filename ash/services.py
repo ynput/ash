@@ -1,5 +1,3 @@
-from typing import Any
-
 import docker
 from docker.models.containers import Container
 
@@ -51,28 +49,28 @@ class Services:
         cls,
         image: str,
         hostname: str,
-        environment: dict[str, str],
-        labels: dict[str, str],
-        volumes: list[str] | None,
-        **kwargs: Any,
+        *,
+        environment: dict[str, str] | None = None,
+        labels: dict[str, str] | None = None,
+        volumes: list[str] | None = None,
     ) -> Container | None:
         if cls.client is None:
             cls.connect()
+
         if cls.client is None:
             return None
 
         container: Container = cls.client.containers.run(
             image,
+            name=hostname,
             detach=True,
             auto_remove=True,
-            environment=environment,
             hostname=hostname,
             network_mode=config.network_mode,
             network=config.network,
-            name=hostname,
-            labels=labels,
-            volumes=volumes,
-            **kwargs,
+            environment=environment or {},
+            labels=labels or {},
+            volumes=volumes or [],
         )
         return container
 
@@ -147,10 +145,10 @@ class Services:
 
             container = cls.spawn(
                 image,
-                hostname,
-                environment,
-                labels,
-                volumes or None,
+                hostname=hostname,
+                environment=environment,
+                labels=labels,
+                volumes=volumes or None,
             )
 
         # Ensure container logger is running

@@ -7,6 +7,8 @@ from ash.logging import logger
 from ash.models import ServiceConfigModel, ServiceModel
 from ash.services import Services
 
+authorized_registries = {}
+
 
 def main() -> None:
     health = get_health()
@@ -34,6 +36,25 @@ def main() -> None:
         should_run.append(service.name)
         if not service.data.image:
             continue
+
+        if service.data.login is not None:
+            registry_url = service.data.login.registry
+            if registry_url not in authorized_registries:
+                kwargs = service.data.login.model_dump(
+                    exclude_unset=True,
+                    exclude_none=True,
+                )
+                logger.info(
+                    f"Authorizing registry {registry_url} for service {service.name}"
+                )
+
+                if not Services.client:
+                    Services.connect()
+
+                assert Services.client is not None  # for mypy
+
+                Services.client.login(**kwargs)
+                authorized_registries[registry_url] = kwargs
 
         service_config = ServiceConfigModel(**service.data.model_dump())
 

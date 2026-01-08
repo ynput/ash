@@ -67,28 +67,28 @@ class ServiceConfigModel(OPModel):
 
 class DockerLogin(OPModel):
     registry: Annotated[
-        str | None,
+        str,
         Field(
             title="Registry URL",
             examples=["https://my-registry.com/v1/"],
         ),
-    ] = None
+    ]
 
     username: Annotated[
-        str | None,
+        str,
         Field(
             title="Registry Username",
             examples=["my-username"],
         ),
-    ] = None
+    ]
 
     password: Annotated[
-        str | None,
+        str,
         Field(
             title="Registry Password",
             examples=["my-password"],
         ),
-    ] = None
+    ]
 
     email: Annotated[
         str | None,
