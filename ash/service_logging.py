@@ -20,7 +20,7 @@ class ServiceLog:
             return
 
         for line in self.container.logs(stream=True, tail=1, follow=True):
-            print(f"{line.decode().strip()}")
+            print(f"> {line.decode().strip()}")
 
         # service exited
         # print the status code and free the container
