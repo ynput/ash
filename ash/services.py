@@ -151,12 +151,17 @@ class Services:
                 for p in service_config.ports or []:
                     ports_pair = p.split(":")
                     if len(ports_pair) == 1:
-                        # If only one port is specified, it is the container port
-                        ports[ports_pair[0]] = None
+                        # Compose-like UX: "8080" means
+                        # host 8080 -> container 8080.
+                        host_port = int(ports_pair[0])
+                        container_port = ports_pair[0]
+                        ports[container_port] = host_port
                     elif len(ports_pair) == 2:
-                        # If two ports are specified, the first is the host port
-                        # and the second is the container port
-                        ports[ports_pair[0]] = int(ports_pair[1])
+                        # Keep UI syntax as host:container and
+                        # translate for Docker SDK {container: host}.
+                        host_port = int(ports_pair[0])
+                        container_port = ports_pair[1]
+                        ports[container_port] = host_port
 
             container = cls.spawn(
                 image,
