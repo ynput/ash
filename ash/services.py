@@ -54,6 +54,7 @@ class Services:
         environment: dict[str, str],
         labels: dict[str, str],
         volumes: list[str] | None,
+        ports: dict[str, int | None] | None = None,
         **kwargs: Any,
     ) -> Container | None:
         if cls.client is None:
@@ -62,7 +63,7 @@ class Services:
             return None
 
         container: Container = cls.client.containers.run(
-            image,
+            image=image,
             detach=True,
             auto_remove=True,
             environment=environment,
@@ -72,8 +73,8 @@ class Services:
             name=hostname,
             labels=labels,
             volumes=volumes,
-            **kwargs,
-        )
+            ports=ports,
+            **kwargs)
         return container
 
     @classmethod
@@ -145,12 +146,30 @@ class Services:
                 if target.startswith("/storage"):
                     volumes.append(bind_mount)
 
+            ports: dict[str, int | None] = {}
+            if config.network_mode != "host":
+                for p in service_config.ports or []:
+                    ports_pair = p.split(":")
+                    if len(ports_pair) == 1:
+                        # Compose-like UX: "8080" means
+                        # host 8080 -> container 8080.
+                        host_port = int(ports_pair[0])
+                        container_port = ports_pair[0]
+                        ports[container_port] = host_port
+                    elif len(ports_pair) == 2:
+                        # Keep UI syntax as host:container and
+                        # translate for Docker SDK {container: host}.
+                        host_port = int(ports_pair[0])
+                        container_port = ports_pair[1]
+                        ports[container_port] = host_port
+
             container = cls.spawn(
                 image,
                 hostname,
                 environment,
                 labels,
                 volumes or None,
+                ports=ports or None,
             )
 
         # Ensure container logger is running
