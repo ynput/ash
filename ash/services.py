@@ -88,7 +88,7 @@ class Services:
                 volumes=volumes or [],
             )
         except Exception as e:
-            raise UnableToStartError(f"Unable to pull image {image}: {e}") from e
+            raise UnableToStartError(f"{e}") from e
 
         return container
 
