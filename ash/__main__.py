@@ -1,4 +1,7 @@
+import signal
+import sys
 import time
+from types import FrameType
 
 from ash.api import api
 from ash.config import config
@@ -7,7 +10,14 @@ from ash.logging import logger
 from ash.models import ServiceConfigModel, ServiceModel
 from ash.services import Services
 
-authorized_registries = {}
+shutdown_requested = False
+
+
+def handle_shutdown_signal(signum: int, _frame: FrameType | None) -> None:
+    global shutdown_requested
+    logger.info(f"Received {signal.Signals(signum).name}, shutting down gracefully")
+    logger.trace("I can't lie to you about your chances, but you have my sympathies")
+    shutdown_requested = True
 
 
 def main() -> None:
@@ -37,25 +47,6 @@ def main() -> None:
         if not service.data.image:
             continue
 
-        if service.data.login is not None:
-            registry_url = service.data.login.registry
-            if registry_url not in authorized_registries:
-                kwargs = service.data.login.model_dump(
-                    exclude_unset=True,
-                    exclude_none=True,
-                )
-                logger.info(
-                    f"Authorizing registry {registry_url} for service {service.name}"
-                )
-
-                if not Services.client:
-                    Services.connect()
-
-                assert Services.client is not None  # for mypy
-
-                Services.client.login(**kwargs)
-                authorized_registries[registry_url] = kwargs
-
         service_config = ServiceConfigModel(**service.data.model_dump())
 
         Services.ensure_running(
@@ -71,6 +62,14 @@ def main() -> None:
 
 
 if __name__ == "__main__":
+    signal.signal(signal.SIGTERM, handle_shutdown_signal)
+    signal.signal(signal.SIGINT, handle_shutdown_signal)
+
     while "my guitar gently weeps":
         main()
+        if shutdown_requested:
+            break
         time.sleep(2)
+
+    logger.info("Ash stopped")
+    sys.exit(0)
