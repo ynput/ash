@@ -1,6 +1,7 @@
 import docker
 from docker.models.containers import Container
 
+from ash.api import api
 from ash.config import config
 from ash.logging import logger
 from ash.models import RegistryAuth, ServiceConfigModel
@@ -171,7 +172,14 @@ class Services:
                     registry_auth=registry_auth,
                 )
             except UnableToStartError as e:
-                logger.error(f"Unable to start service {service_name}: {e}")
+                error_message = str(e)
+                logger.error(f"Unable to start service {service_name}: {error_message}")
+
+                api.patch(
+                    f"services/{service_name}",
+                    json={"shouldRun": False, "error": error_message},
+                )
+
                 return
 
         # Ensure container logger is running
