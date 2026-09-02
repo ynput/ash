@@ -65,15 +65,7 @@ class ServiceConfigModel(OPModel):
     ]
 
 
-class DockerLogin(OPModel):
-    registry: Annotated[
-        str,
-        Field(
-            title="Registry URL",
-            examples=["https://my-registry.com/v1/"],
-        ),
-    ]
-
+class RegistryAuth(OPModel):
     username: Annotated[
         str,
         Field(
@@ -90,14 +82,6 @@ class DockerLogin(OPModel):
         ),
     ]
 
-    email: Annotated[
-        str | None,
-        Field(
-            title="Registry Email",
-            examples=["me@home.com"],
-        ),
-    ] = None
-
 
 class ServiceDataModel(ServiceConfigModel):
     image: Annotated[
@@ -107,10 +91,10 @@ class ServiceDataModel(ServiceConfigModel):
         ),
     ] = None
 
-    login: Annotated[
-        DockerLogin | None,
+    registry_auth: Annotated[
+        RegistryAuth | None,
         Field(
-            title="Docker Login",
+            title="Registry authentication",
         ),
     ] = None
 

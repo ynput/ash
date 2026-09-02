@@ -56,6 +56,7 @@ def main() -> None:
             service=service.service,
             image=service.data.image,
             service_config=service_config,
+            registry_auth=service.data.registry_auth,
         )
 
     Services.stop_orphans(should_run=should_run)
