@@ -175,10 +175,15 @@ class Services:
                 error_message = str(e)
                 logger.error(f"Unable to start service {service_name}: {error_message}")
 
-                api.patch(
-                    f"services/{service_name}",
-                    json={"shouldRun": False, "error": error_message},
-                )
+                try:
+                    api.patch(
+                        f"services/{service_name}",
+                        json={"shouldRun": False, "error": error_message},
+                    )
+                except Exception as patch_err:
+                    logger.error(
+                        f"Unable to report service start failure for {service_name}: {patch_err}"
+                    )
 
                 return
 
