@@ -1,13 +1,16 @@
-from typing import Any
-
 import docker
 from docker.models.containers import Container
 
+from ash.api import api
 from ash.config import config
 from ash.logging import logger
-from ash.models import ServiceConfigModel
+from ash.models import RegistryAuth, ServiceConfigModel
 from ash.service_logging import ServiceLogger
 from ash.utils import slugify
+
+
+class UnableToStartError(Exception):
+    pass
 
 
 class Services:
@@ -51,29 +54,42 @@ class Services:
         cls,
         image: str,
         hostname: str,
-        environment: dict[str, str],
-        labels: dict[str, str],
-        volumes: list[str] | None,
-        **kwargs: Any,
+        *,
+        environment: dict[str, str] | None = None,
+        labels: dict[str, str] | None = None,
+        volumes: list[str] | None = None,
+        registry_auth: RegistryAuth | None = None,
     ) -> Container | None:
         if cls.client is None:
             cls.connect()
+
         if cls.client is None:
             return None
 
-        container: Container = cls.client.containers.run(
-            image,
-            detach=True,
-            auto_remove=True,
-            environment=environment,
-            hostname=hostname,
-            network_mode=config.network_mode,
-            network=config.network,
-            name=hostname,
-            labels=labels,
-            volumes=volumes,
-            **kwargs,
-        )
+        # pull the image explicitly to avoid issues with private registries
+        # and to update the image if it has changed
+
+        try:
+            cls.client.images.pull(
+                image,
+                auth_config=registry_auth.model_dump() if registry_auth else None,
+            )
+
+            container: Container = cls.client.containers.run(
+                image,
+                name=hostname,
+                detach=True,
+                auto_remove=True,
+                hostname=hostname,
+                network_mode=config.network_mode,
+                network=config.network,
+                environment=environment or {},
+                labels=labels or {},
+                volumes=volumes or [],
+            )
+        except Exception as e:
+            raise UnableToStartError(f"{e}") from e
+
         return container
 
     @classmethod
@@ -85,6 +101,7 @@ class Services:
         service: str,
         image: str,
         service_config: ServiceConfigModel,
+        registry_auth: RegistryAuth | None = None,
     ) -> None:
         if cls.client is None:
             cls.connect()
@@ -145,13 +162,31 @@ class Services:
                 if target.startswith("/storage"):
                     volumes.append(bind_mount)
 
-            container = cls.spawn(
-                image,
-                hostname,
-                environment,
-                labels,
-                volumes or None,
-            )
+            try:
+                container = cls.spawn(
+                    image,
+                    hostname=hostname,
+                    environment=environment,
+                    labels=labels,
+                    volumes=volumes or None,
+                    registry_auth=registry_auth,
+                )
+            except UnableToStartError as e:
+                error_message = str(e)
+                logger.error(f"Unable to start service {service_name}: {error_message}")
+
+                try:
+                    api.patch(
+                        f"services/{service_name}",
+                        json={"shouldRun": False, "error": error_message},
+                    )
+                except Exception as patch_err:
+                    logger.error(
+                        f"Unable to report service start failure for {service_name}: {patch_err}"
+                    )
+
+                return
 
         # Ensure container logger is running
-        ServiceLogger.add(service_name, container)
+        if isinstance(container, Container):
+            ServiceLogger.add(service_name, container)
