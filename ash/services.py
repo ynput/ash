@@ -13,6 +13,24 @@ class UnableToStartError(Exception):
     pass
 
 
+def _docker_port_bindings(ports: list[str] | None) -> dict[str, int] | None:
+    """Convert `host:container[/proto]` mappings to the dict docker-py expects."""
+    if not ports:
+        return None
+
+    bindings: dict[str, int] = {}
+    for mapping in ports:
+        host_port, sep, container_port = mapping.partition(":")
+        if not sep:
+            logger.warning(f"Ignoring malformed port mapping: {mapping}")
+            continue
+        try:
+            bindings[container_port] = int(host_port)
+        except ValueError:
+            logger.warning(f"Ignoring malformed port mapping: {mapping}")
+    return bindings or None
+
+
 class Services:
     client: docker.DockerClient | None = None
     prefix: str = "io.ayon.service"
@@ -58,6 +76,9 @@ class Services:
         environment: dict[str, str] | None = None,
         labels: dict[str, str] | None = None,
         volumes: list[str] | None = None,
+        ports: list[str] | None = None,
+        mem_limit: str | None = None,
+        user: str | None = None,
         registry_auth: RegistryAuth | None = None,
     ) -> Container | None:
         if cls.client is None:
@@ -92,6 +113,9 @@ class Services:
                 environment=environment or {},
                 labels=labels or {},
                 volumes=volumes or [],
+                ports=_docker_port_bindings(ports),
+                mem_limit=mem_limit,
+                user=user,
             )
         except Exception as e:
             raise UnableToStartError(f"{e}") from e
@@ -175,6 +199,9 @@ class Services:
                     environment=environment,
                     labels=labels,
                     volumes=volumes or None,
+                    ports=kwargs.get("ports"),
+                    mem_limit=kwargs.get("mem_limit"),
+                    user=kwargs.get("user"),
                     registry_auth=registry_auth,
                 )
             except UnableToStartError as e:
