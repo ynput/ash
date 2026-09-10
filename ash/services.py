@@ -67,13 +67,19 @@ class Services:
             return None
 
         # pull the image explicitly to avoid issues with private registries
-        # and to update the image if it has changed
+        # and to update the image if it has changed. If the pull fails,
+        # fall back to an already existing local image (e.g. one built
+        # locally during development and not pushed to any registry).
 
         try:
-            cls.client.images.pull(
-                image,
-                auth_config=registry_auth.model_dump() if registry_auth else None,
-            )
+            try:
+                cls.client.images.pull(
+                    image,
+                    auth_config=registry_auth.model_dump() if registry_auth else None,
+                )
+            except docker.errors.APIError:
+                cls.client.images.get(image)
+                logger.warning(f"Unable to pull {image}, using local image")
 
             container: Container = cls.client.containers.run(
                 image,
