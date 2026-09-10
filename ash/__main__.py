@@ -14,7 +14,7 @@ shutdown_requested = False
 
 
 def handle_shutdown_signal(signum: int, _frame: FrameType | None) -> None:
-    global shutdown_requested
+    global shutdown_requested  # noqa: PLW0603
     logger.info(f"Received {signal.Signals(signum).name}, shutting down gracefully")
     logger.trace("I can't lie to you about your chances, but you have my sympathies")
     shutdown_requested = True

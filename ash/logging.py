@@ -1,4 +1,4 @@
-__all__ = ["logger", "log_traceback"]
+__all__ = ["log_traceback", "logger"]
 
 import sys
 import time
@@ -12,10 +12,10 @@ from ash.utils import indent, json_dumps
 
 
 def _write_stderr(message: str) -> None:
-    print(message, file=sys.stderr, flush=True)
+    print(message, file=sys.stderr, flush=True)  # noqa: T201
 
 
-def _serializer(message) -> None:  # type: ignore[no-untyped-def]
+def _serializer(message) -> None:  # type: ignore[no-untyped-def]  #noqa: ANN001
     record = message.record
     level = record["level"].name
     message = record["message"]

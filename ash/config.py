@@ -36,7 +36,7 @@ class BaseConfig(BaseModel):
     )
 
     @field_validator("log_level", mode="before")
-    def validate_log_level(cls, value: str) -> str:
+    def validate_log_level(cls, value: str) -> str:  # noqa: N805
         return value.upper()
 
 
@@ -53,7 +53,7 @@ def get_local_info() -> dict[str, Any]:
             continue
         break
     else:
-        print("Weird, no container found for this host")
+        print("Weird, no container found for this host")  # noqa: T201
         sys.exit(1)
 
     networks = insp["NetworkSettings"]["Networks"]
@@ -67,10 +67,10 @@ def get_local_info() -> dict[str, Any]:
 def get_config() -> Config:
     data = {}
     for key, val in os.environ.items():
-        key = key.lower()
-        if not key.startswith("ayon_"):
+        lkey = key.lower()
+        if not lkey.startswith("ayon_"):
             continue
-        data[key.replace("ayon_", "", 1)] = val
+        data[lkey.replace("ayon_", "", 1)] = val
     try:
         base_config = BaseConfig(**data)
     except ValidationError as e:
@@ -78,7 +78,7 @@ def get_config() -> Config:
             error_desc = error["msg"]
             error_loc = ".".join(str(loc) for loc in error["loc"])
 
-            print(
+            print(  # noqa: T201
                 f"Error in config: {error_desc} at {error_loc}",
                 file=sys.stderr,
                 flush=True,

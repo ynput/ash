@@ -2,8 +2,11 @@
 name = "ash"
 version = "1.0.0"
 description = "Ayon service host"
-authors = ["Ynput <info@ynput.io>", "Martin Wacker <martin@ynput.io"]
-requires-python = ">=3.11,<3.12"
+authors = [
+  { name = "Ynput", email = "info@ynput.io" },
+  { name = "Martin Wacker", email = "martin@ynput.io" },
+]
+requires-python = ">=3.12"
 dependencies = [
   "pydantic-settings>=2.8.1",
   "pydantic>=2.10.6",
@@ -40,26 +43,28 @@ dev = [
 [tool.ruff]
 line-length = 88
 
+# ignore mkdocs_hooks.py and test files
+exclude = [
+  "mkdocs_hooks.py",
+]
+
 [tool.ruff.format]
 indent-style = "space"
 line-ending = "auto"
 
 [tool.ruff.lint]
-select = [
-    "E",   # pycodestyle errors
-    "W",   # pycodestyle warnings
-    "F",   # pyflakes
-    "I",   # isort
-    "C",   # flake8-comprehensions
-    "ISC", # flake8-implicit-str-concat
-    "C4",  # flake8-comprehensions
-    "UP",  # pyupgrade
-]
+select = ["ALL"]
 
 ignore = [
-    "ISC001", # incompatible with formatting
-    "E721",  # do not compare types, i'll fix this later :)
-    "C901",  # too complex. C'mon - this is a complex project
+  "D",
+  "ANN401",
+  "COM812",  # messes with formatting
+  "PLR0913", # too many arguments
+  "C901",    # too complex
+  "BLE001",  # blind except
+  "EM102",
+  "ERA001",  # commented out code
+  "S101",    # TODO: remove asserts
 ]
 
 [tool.mypy]
@@ -67,17 +72,17 @@ plugins = [
   "pydantic.mypy"
 ]
 
+strict = true
+check_untyped_defs = true
+disallow_any_generics = true
+disallow_untyped_defs = true
+explicit_package_bases = true
 follow_imports = "silent"
+no_implicit_reexport = true
+strict_optional = true
 warn_redundant_casts = true
 warn_unused_ignores = true
-disallow_any_generics = true
-check_untyped_defs = true
-no_implicit_reexport = true
-explicit_package_bases = true
-strict_optional = true
 
 exclude = "^[test|tool|mkdocs_hooks.py].*"
 
-# for strict mypy: (this is the tricky one :-))
-disallow_untyped_defs = true
 

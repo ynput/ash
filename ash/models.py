@@ -1,4 +1,4 @@
-__all__ = ["OPModel", "Field"]
+__all__ = ["Field", "OPModel"]
 
 
 from datetime import datetime
@@ -29,7 +29,7 @@ class ServiceConfigModel(OPModel):
         list[str] | None,
         Field(
             title="Volumes",
-            examples=[["/tmp:/tmp"]],
+            examples=[["/tmp:/tmp"]],  # noqa: S108
         ),
     ] = None
 

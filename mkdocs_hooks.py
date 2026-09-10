@@ -19,8 +19,7 @@ class ColorFormatter(logging.Formatter):
     bold_red = "\x1b[31;1m"
     reset = "\x1b[0m"
     fmt = (
-        "%(asctime)s - %(name)s - %(levelname)s - %(message)s "  # noqa
-        "(%(filename)s:%(lineno)d)"
+        "%(asctime)s - %(name)s - %(levelname)s - %(message)s (%(filename)s:%(lineno)d)"
     )
 
     FORMATS = {
@@ -175,7 +174,7 @@ def on_pre_build(config):
             msg="HOOK    -  on_pre_build",
         )
     except BaseException as e:
-        logging.error(e)
+        logging.exception(e)
         remove_missing_init_files(
             msg="HOOK    -  on_post_build: cleaning up on error !"
         )
