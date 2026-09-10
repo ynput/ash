@@ -1,6 +1,6 @@
 [project]
 name = "ash"
-version = "0.5.0"
+version = "1.0.0"
 description = "Ayon service host"
 authors = ["Ynput <info@ynput.io>", "Martin Wacker <martin@ynput.io"]
 requires-python = ">=3.11,<3.12"
