@@ -167,5 +167,5 @@ class ServiceModel(OPModel):
 
     data: Annotated[
         ServiceDataModel,
-        Field(default_factory=lambda: ServiceDataModel()),
+        Field(default_factory=ServiceDataModel),
     ]

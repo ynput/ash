@@ -57,9 +57,11 @@ select = ["ALL"]
 
 ignore = [
   "D",
+  "CPY001",  # missing copyright
   "ANN401",
   "COM812",  # messes with formatting
   "PLR0913", # too many arguments
+  "PLR0917", # too many positional arguments
   "C901",    # too complex
   "BLE001",  # blind except
   "EM102",

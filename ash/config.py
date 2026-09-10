@@ -48,6 +48,8 @@ def get_local_info() -> dict[str, Any]:
     client = docker.DockerClient(base_url="unix://var/run/docker.sock")
     api = docker.APIClient(base_url="unix://var/run/docker.sock")
     for container in client.containers.list():
+        if not isinstance(container.id, str):
+            continue
         insp = api.inspect_container(container.id)
         if insp["Config"]["Hostname"] != socket.gethostname():
             continue
