@@ -65,6 +65,24 @@ class ServiceConfigModel(OPModel):
     ]
 
 
+class RegistryAuth(OPModel):
+    username: Annotated[
+        str,
+        Field(
+            title="Registry Username",
+            examples=["my-username"],
+        ),
+    ]
+
+    password: Annotated[
+        str,
+        Field(
+            title="Registry Password",
+            examples=["my-password"],
+        ),
+    ]
+
+
 class ServiceDataModel(ServiceConfigModel):
     image: Annotated[
         str | None,
@@ -73,14 +91,81 @@ class ServiceDataModel(ServiceConfigModel):
         ),
     ] = None
 
+    registry_auth: Annotated[
+        RegistryAuth | None,
+        Field(
+            title="Registry authentication",
+        ),
+    ] = None
+
 
 class ServiceModel(OPModel):
-    name: str = Field(...)
-    hostname: str = Field(..., examples=["worker03"])
-    addon_name: str = Field(..., examples=["ftrack"])
-    addon_version: str = Field(..., examples=["2.0.0"])
-    service: str = Field(..., examples=["leecher"])
-    should_run: bool = Field(...)
-    is_running: bool = Field(...)
-    last_seen: datetime | None = Field(None)
-    data: ServiceDataModel = Field(default_factory=ServiceDataModel)
+    name: Annotated[
+        str,
+        Field(
+            title="Service Name",
+            description="Unique service name",
+            examples=["ftrack-leecher"],
+        ),
+    ]
+
+    hostname: Annotated[
+        str,
+        Field(
+            title="Host name",
+            examples=["worker03"],
+        ),
+    ]
+
+    addon_name: Annotated[
+        str,
+        Field(
+            title="Addon name",
+            examples=["ftrack"],
+        ),
+    ]
+
+    addon_version: Annotated[
+        str,
+        Field(
+            title="Addon version",
+            examples=["2.0.0"],
+        ),
+    ]
+
+    service: Annotated[
+        str,
+        Field(
+            title="Service",
+            description="Type of service as defined in the addon manifest",
+            examples=["leecher"],
+        ),
+    ]
+
+    should_run: Annotated[
+        bool,
+        Field(
+            title="Should run",
+            description="Whether the service is expected to be running or not",
+        ),
+    ] = False
+
+    is_running: Annotated[
+        bool,
+        Field(
+            title="Is running",
+            description="Whether the service is currently running or not",
+        ),
+    ] = False
+
+    last_seen: Annotated[
+        datetime | None,
+        Field(
+            title="Last seen at",
+        ),
+    ] = None
+
+    data: Annotated[
+        ServiceDataModel,
+        Field(default_factory=lambda: ServiceDataModel()),
+    ]
