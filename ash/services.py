@@ -188,7 +188,8 @@ class Services:
                     )
                 except Exception as patch_err:
                     logger.error(
-                        f"Unable to report service start failure for {service_name}: {patch_err}"
+                        f"Unable to report service start failure for {service_name}: "
+                        f"{patch_err}"
                     )
 
                 return
