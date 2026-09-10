@@ -1,3 +1,5 @@
+import re
+
 import docker
 from docker.models.containers import Container
 
@@ -7,6 +9,39 @@ from ash.logging import logger
 from ash.models import RegistryAuth, ServiceConfigModel
 from ash.service_logging import ServiceLogger
 from ash.utils import slugify
+
+_WINDOWS_DRIVE_PREFIX = re.compile(r"^[A-Za-z]:")
+
+
+def _bind_target(bind_mount: str) -> str | None:
+    r"""Return the container-side target path.
+
+    Takes a Docker bind mount string of the form `host:container[:mode]`,
+    tolerating a Windows-style host path.
+
+    Matches a Windows drive letter prefix (e.g. "C:") on a host path.
+    Docker Desktop on Windows reports bind mounts with the host path
+    in its native form (e.g. "C:\Users\me\storage:/storage:rw"), which
+    has an extra colon compared to the Linux "host:container[:mode]"
+    shape.
+
+    Args:
+        bind_mount (str): The Docker bind mount
+            string of the form `host:container[:mode]`.
+
+    Returns:
+        str | None: The container-side target path, or None if the input is malformed.
+
+    """
+
+    rest = bind_mount
+    if _WINDOWS_DRIVE_PREFIX.match(bind_mount):
+        rest = bind_mount[2:]
+
+    parts = rest.split(":")
+    if len(parts) < 2:  # noqa: PLR2004
+        return None
+    return parts[1]
 
 
 class UnableToStartError(Exception):
@@ -188,8 +223,8 @@ class Services:
                 # add global storage from the ash itself
                 if not isinstance(bind_mount, str):
                     continue
-                target = bind_mount.split(":")[1]
-                if target.startswith("/storage"):
+                target = _bind_target(bind_mount)
+                if target and target.startswith("/storage"):
                     volumes.append(bind_mount)
 
             try:
