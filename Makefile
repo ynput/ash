@@ -18,6 +18,7 @@ check:
 	uv run ruff check ash --fix
 	uv run ruff format ash
 	uv run mypy ash
+	uv run pytest
 
 build: check
 	docker build -t $(IMAGE_NAME):latest -t $(IMAGE_NAME):$(VERSION) .
