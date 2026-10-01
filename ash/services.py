@@ -1,4 +1,6 @@
 import re
+from collections.abc import Mapping
+from typing import cast
 
 import docker
 from docker.models.containers import Container
@@ -7,6 +9,12 @@ from ash.api import api
 from ash.config import config
 from ash.logging import logger
 from ash.models import RegistryAuth, ServiceConfigModel
+from ash.ports import (
+    HostBinding,
+    PortMappingError,
+    parse_port_mapping,
+    supports_port_publishing,
+)
 from ash.service_logging import ServiceLogger
 from ash.utils import slugify
 
@@ -48,26 +56,42 @@ class UnableToStartError(Exception):
     pass
 
 
-def _docker_port_bindings(ports: list[str] | None) -> dict[str, int] | None:
-    """Convert `host:container[/proto]` mappings to the dict docker-py expects.
+# Port bindings as typed by types-docker. docker-py also accepts lists of
+# (ip, port) tuples at runtime; the stubs are narrower than that.
+DockerPorts = Mapping[str, int | list[int] | tuple[str, int] | None]
 
-    Compose-like UX: a bare `8080` means host 8080 -> container 8080.
-    Port publishing is ignored when running in host network mode.
+
+def _docker_port_bindings(
+    ports: list[str] | None,
+) -> DockerPorts | None:
+    """Convert `[[ip:]host:]container[/proto]` mappings for docker-py.
+
+    Mappings are skipped (and logged) when the configured network mode
+    does not allow publishing ports, or when they are malformed.
+    Blank entries (e.g. trailing newlines from the UI) are dropped silently.
     """
-    if not ports or config.network_mode == "host":
+    ports = [p for p in ports or [] if p.strip()]
+    if not ports:
         return None
 
-    bindings: dict[str, int] = {}
+    if not supports_port_publishing(config.network_mode):
+        logger.info(
+            f"Ignoring port mappings {ports}: ports cannot be published "
+            f"in network mode '{config.network_mode}'"
+        )
+        return None
+
+    bindings: dict[str, list[HostBinding]] = {}
     for mapping in ports:
-        host_port, sep, container_port = mapping.partition(":")
-        if not sep:
-            container_port = host_port
-            host_port = host_port.partition("/")[0]
         try:
-            bindings[container_port] = int(host_port)
-        except ValueError:
-            logger.warning(f"Ignoring malformed port mapping: {mapping}")
-    return bindings or None
+            container_key, host = parse_port_mapping(mapping)
+        except PortMappingError as e:
+            logger.warning(f"Ignoring port mapping '{mapping}': {e}")
+            continue
+        targets = bindings.setdefault(container_key, [])
+        if host not in targets:
+            targets.append(host)
+    return cast("DockerPorts", bindings) if bindings else None
 
 
 class Services:
