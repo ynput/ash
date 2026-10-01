@@ -20,7 +20,7 @@ class ServiceLog:
             return
 
         for line in self.container.logs(stream=True, tail=1, follow=True):
-            print(f"> {line.decode().strip()}")
+            print(f"> {line.decode().strip()}")  # noqa: T201
 
         # service exited
         # print the status code and free the container
@@ -31,8 +31,7 @@ class ServiceLog:
 
 
 class ServiceLogger:
-    """
-    Service logger collects the logs from the services and prints them to stdout
+    """Service logger collects the logs from the services and prints them to stdout
     That effectively proxies all the logs from the services to the ash logs.
 
     Service is responsible for the formatting of the logs. It SHOULD contain

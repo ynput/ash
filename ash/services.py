@@ -1,13 +1,73 @@
-from typing import Any
+import re
 
 import docker
 from docker.models.containers import Container
 
+from ash.api import api
 from ash.config import config
 from ash.logging import logger
-from ash.models import ServiceConfigModel
+from ash.models import RegistryAuth, ServiceConfigModel
 from ash.service_logging import ServiceLogger
 from ash.utils import slugify
+
+_WINDOWS_DRIVE_PREFIX = re.compile(r"^[A-Za-z]:")
+
+
+def _bind_target(bind_mount: str) -> str | None:
+    r"""Return the container-side target path.
+
+    Takes a Docker bind mount string of the form `host:container[:mode]`,
+    tolerating a Windows-style host path.
+
+    Matches a Windows drive letter prefix (e.g. "C:") on a host path.
+    Docker Desktop on Windows reports bind mounts with the host path
+    in its native form (e.g. "C:\Users\me\storage:/storage:rw"), which
+    has an extra colon compared to the Linux "host:container[:mode]"
+    shape.
+
+    Args:
+        bind_mount (str): The Docker bind mount
+            string of the form `host:container[:mode]`.
+
+    Returns:
+        str | None: The container-side target path, or None if the input is malformed.
+
+    """
+
+    rest = bind_mount
+    if _WINDOWS_DRIVE_PREFIX.match(bind_mount):
+        rest = bind_mount[2:]
+
+    parts = rest.split(":")
+    if len(parts) < 2:  # noqa: PLR2004
+        return None
+    return parts[1]
+
+
+class UnableToStartError(Exception):
+    pass
+
+
+def _docker_port_bindings(ports: list[str] | None) -> dict[str, int] | None:
+    """Convert `host:container[/proto]` mappings to the dict docker-py expects.
+
+    Compose-like UX: a bare `8080` means host 8080 -> container 8080.
+    Port publishing is ignored when running in host network mode.
+    """
+    if not ports or config.network_mode == "host":
+        return None
+
+    bindings: dict[str, int] = {}
+    for mapping in ports:
+        host_port, sep, container_port = mapping.partition(":")
+        if not sep:
+            container_port = host_port
+            host_port = host_port.partition("/")[0]
+        try:
+            bindings[container_port] = int(host_port)
+        except ValueError:
+            logger.warning(f"Ignoring malformed port mapping: {mapping}")
+    return bindings or None
 
 
 class Services:
@@ -51,30 +111,54 @@ class Services:
         cls,
         image: str,
         hostname: str,
-        environment: dict[str, str],
-        labels: dict[str, str],
-        volumes: list[str] | None,
-        ports: dict[str, int | None] | None = None,
-        **kwargs: Any,
+        *,
+        environment: dict[str, str] | None = None,
+        labels: dict[str, str] | None = None,
+        volumes: list[str] | None = None,
+        ports: list[str] | None = None,
+        mem_limit: str | None = None,
+        user: str | None = None,
+        registry_auth: RegistryAuth | None = None,
     ) -> Container | None:
         if cls.client is None:
             cls.connect()
+
         if cls.client is None:
             return None
 
-        container: Container = cls.client.containers.run(
-            image=image,
-            detach=True,
-            auto_remove=True,
-            environment=environment,
-            hostname=hostname,
-            network_mode=config.network_mode,
-            network=config.network,
-            name=hostname,
-            labels=labels,
-            volumes=volumes,
-            ports=ports,
-            **kwargs)
+        # pull the image explicitly to avoid issues with private registries
+        # and to update the image if it has changed. If the pull fails,
+        # fall back to an already existing local image (e.g. one built
+        # locally during development and not pushed to any registry).
+
+        try:
+            try:
+                cls.client.images.pull(
+                    image,
+                    auth_config=registry_auth.model_dump() if registry_auth else None,
+                )
+            except docker.errors.APIError:
+                cls.client.images.get(image)
+                logger.warning(f"Unable to pull {image}, using local image")
+
+            container: Container = cls.client.containers.run(
+                image,
+                name=hostname,
+                detach=True,
+                auto_remove=True,
+                hostname=hostname,
+                network_mode=config.network_mode,
+                network=config.network,
+                environment=environment or {},
+                labels=labels or {},
+                volumes=volumes or [],
+                ports=_docker_port_bindings(ports),
+                mem_limit=mem_limit,
+                user=user,
+            )
+        except Exception as e:
+            raise UnableToStartError(f"{e}") from e
+
         return container
 
     @classmethod
@@ -86,6 +170,7 @@ class Services:
         service: str,
         image: str,
         service_config: ServiceConfigModel,
+        registry_auth: RegistryAuth | None = None,
     ) -> None:
         if cls.client is None:
             cls.connect()
@@ -142,35 +227,39 @@ class Services:
                 # add global storage from the ash itself
                 if not isinstance(bind_mount, str):
                     continue
-                target = bind_mount.split(":")[1]
-                if target.startswith("/storage"):
+                target = _bind_target(bind_mount)
+                if target and target.startswith("/storage"):
                     volumes.append(bind_mount)
 
-            ports: dict[str, int | None] = {}
-            if config.network_mode != "host":
-                for p in service_config.ports or []:
-                    ports_pair = p.split(":")
-                    if len(ports_pair) == 1:
-                        # Compose-like UX: "8080" means
-                        # host 8080 -> container 8080.
-                        host_port = int(ports_pair[0])
-                        container_port = ports_pair[0]
-                        ports[container_port] = host_port
-                    elif len(ports_pair) == 2:
-                        # Keep UI syntax as host:container and
-                        # translate for Docker SDK {container: host}.
-                        host_port = int(ports_pair[0])
-                        container_port = ports_pair[1]
-                        ports[container_port] = host_port
+            try:
+                container = cls.spawn(
+                    image,
+                    hostname=hostname,
+                    environment=environment,
+                    labels=labels,
+                    volumes=volumes or None,
+                    ports=kwargs.get("ports"),
+                    mem_limit=kwargs.get("mem_limit"),
+                    user=kwargs.get("user"),
+                    registry_auth=registry_auth,
+                )
+            except UnableToStartError as e:
+                error_message = str(e)
+                logger.error(f"Unable to start service {service_name}: {error_message}")
 
-            container = cls.spawn(
-                image,
-                hostname,
-                environment,
-                labels,
-                volumes or None,
-                ports=ports or None,
-            )
+                try:
+                    api.patch(
+                        f"services/{service_name}",
+                        json={"shouldRun": False, "error": error_message},
+                    )
+                except Exception as patch_err:
+                    logger.error(
+                        f"Unable to report service start failure for {service_name}: "
+                        f"{patch_err}",
+                    )
+
+                return
 
         # Ensure container logger is running
-        ServiceLogger.add(service_name, container)
+        if isinstance(container, Container):
+            ServiceLogger.add(service_name, container)

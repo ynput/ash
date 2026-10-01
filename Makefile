@@ -1,5 +1,5 @@
 IMAGE_NAME=ynput/ayon-ash
-VERSION=$(shell python -c "import ash; print(ash.__version__, end='')")
+VERSION=$(shell python -c "import ash.version; print(ash.version.__version__, end='')")
 
 run: build
 	docker run \
@@ -14,14 +14,22 @@ run: build
 		$(IMAGE_NAME):latest
 
 check:
-	sed -i "s/^version = \".*\"/version = \"$(VERSION)\"/" pyproject.toml
-	poetry run black .
-	poetry run ruff --fix .
-	poetry run mypy .
+	uv version $(VERSION)
+	uv run ruff check ash --fix
+	uv run ruff format ash
+	uv run mypy ash
 
 build: check
 	docker build -t $(IMAGE_NAME):latest -t $(IMAGE_NAME):$(VERSION) .
 
 dist: build
+	git checkout main && git pull && git merge develop && git push
+	git tag -a $(VERSION) -m "Version $(VERSION)" && git push --tags
+
+	gh release create \
+		$(VERSION) \
+		-t $(VERSION) \
+		--generate-notes
+
 	docker push ynput/ayon-ash:$(VERSION)
 	docker push ynput/ayon-ash:latest
